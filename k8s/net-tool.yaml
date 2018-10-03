@@ -1,0 +1,156 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: udp
+    type: multicast
+  name: udp-multicaster
+spec:
+  # clusterIP: None
+  type: ClusterIP
+  ports:
+  - protocol: UDP
+    port: 9782
+    targetPort: 9782
+  selector:
+    app: udp
+    type: multicast
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels:
+    app: udp
+    type: multicast
+  name: udp-multicaster
+spec: 
+  selector:
+    matchLabels:
+      app: udp
+      type: multicast
+  replicas: 1
+  template: 
+    metadata: 
+      labels:
+        app: udp
+        type: multicast
+    spec: 
+      containers: 
+        - image: "udp-multicaster:latest"
+          imagePullPolicy: Never
+          name: udp-multicaster
+          ports: 
+          - containerPort: 9782
+          env: 
+          - name: LISTEN_HOST
+            value: ""
+          - name: LISTEN_PORT
+            value: "9782"
+          - name: DIAL_HOST
+            value: "net-tool-listeners"
+          - name: DIAL_PORT
+            value: "9782"
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: net-tool
+    type: listen
+  name: net-tool-listeners
+spec:
+  clusterIP: None
+  type: ClusterIP
+  ports:
+  - protocol: UDP
+    port: 9782
+    targetPort: 9782
+  selector:
+    app: net-tool
+    type: listen
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels:
+    app: net-tool
+    type: listen
+  name: net-tool-listen
+spec: 
+  selector:
+    matchLabels:
+      app: net-tool
+      type: listen
+  replicas: 3
+  template: 
+    metadata: 
+      labels:
+        app: net-tool
+        type: listen
+    spec: 
+      containers: 
+        - image: "net-tool:latest"
+          imagePullPolicy: Never
+          name: net-tool
+          ports: 
+          - containerPort: 9782
+          env: 
+          - name: PROTOCOL
+            value: "udp"
+          - name: LISTEN_HOST
+            value: ""
+          - name: PORT
+            value: "9782"
+          - name: TYPE
+            value: "LISTEN"
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels:
+    app: net-tool
+    type: send
+  name: net-tool-send
+spec: 
+  selector:
+    matchLabels:
+      app: net-tool
+      type: send
+  replicas: 1
+  template: 
+    metadata: 
+      labels:
+        app: net-tool
+        type: send
+    spec: 
+      containers: 
+      - image: "net-tool:latest"
+        imagePullPolicy: Never
+        name: net-tool
+        ports: 
+        - containerPort: 9782
+        env: 
+        - name: PROTOCOL
+          value: "udp"
+        - name: DIAL_HOST
+          value: "udp-multicaster"
+        - name: PORT
+          value: "9782"
+        - name: TYPE
+          value: "SEND"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
