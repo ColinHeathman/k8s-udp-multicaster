@@ -1,74 +1,104 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: udp-multicaster
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: udp-multicaster
+  namespace: default
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: udp-multicaster-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: udp-multicaster
+subjects:
+- kind: ServiceAccount
+  name: udp-multicaster
+  namespace: default
+---
+
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: udp
-    type: multicast
+    app: udp-multicaster
   name: udp-multicaster
 spec:
-  # clusterIP: None
   type: ClusterIP
   ports:
-  - protocol: UDP
+  - name: udp
+    protocol: UDP
     port: 9782
     targetPort: 9782
   selector:
-    app: udp
-    type: multicast
+    app: udp-multicaster
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata: 
   labels:
-    app: udp
-    type: multicast
+    app: udp-multicaster
   name: udp-multicaster
 spec: 
   selector:
     matchLabels:
-      app: udp
-      type: multicast
+      app: udp-multicaster
   replicas: 1
   template: 
     metadata: 
       labels:
-        app: udp
-        type: multicast
+        app: udp-multicaster
     spec: 
+      serviceAccountName: udp-multicaster
       containers: 
-        - image: "udp-multicaster:latest"
+        - image: "k8s-udp-multicaster:latest"
           imagePullPolicy: Never
           name: udp-multicaster
           ports: 
           - containerPort: 9782
           env: 
-          - name: LISTEN_HOST
-            value: ""
           - name: LISTEN_PORT
             value: "9782"
-          - name: DIAL_HOST
-            value: "net-tool-listeners"
-          - name: DIAL_PORT
-            value: "9782"
+          - name: SERVICE_NAME
+            value: "packet-tool-listeners"
+          - name: SERVICE_PORT
+            value: "udp"
+
 ---
 
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: net-tool
+    app: packet-tool
     type: listen
-  name: net-tool-listeners
+  name: packet-tool-listeners
 spec:
   clusterIP: None
   type: ClusterIP
   ports:
-  - protocol: UDP
+  - name: udp
+    protocol: UDP
     port: 9782
     targetPort: 9782
   selector:
-    app: net-tool
+    app: packet-tool
     type: listen
 ---
 
@@ -76,25 +106,25 @@ apiVersion: apps/v1
 kind: Deployment
 metadata: 
   labels:
-    app: net-tool
+    app: packet-tool
     type: listen
-  name: net-tool-listen
+  name: packet-tool-listen
 spec: 
   selector:
     matchLabels:
-      app: net-tool
+      app: packet-tool
       type: listen
   replicas: 3
   template: 
     metadata: 
       labels:
-        app: net-tool
+        app: packet-tool
         type: listen
     spec: 
       containers: 
-        - image: "net-tool:latest"
+        - image: "packet-tool:latest"
           imagePullPolicy: Never
-          name: net-tool
+          name: packet-tool
           ports: 
           - containerPort: 9782
           env: 
@@ -112,25 +142,25 @@ apiVersion: apps/v1
 kind: Deployment
 metadata: 
   labels:
-    app: net-tool
+    app: packet-tool
     type: send
-  name: net-tool-send
+  name: packet-tool-send
 spec: 
   selector:
     matchLabels:
-      app: net-tool
+      app: packet-tool
       type: send
   replicas: 1
   template: 
     metadata: 
       labels:
-        app: net-tool
+        app: packet-tool
         type: send
     spec: 
       containers: 
-      - image: "net-tool:latest"
+      - image: "packet-tool:latest"
         imagePullPolicy: Never
-        name: net-tool
+        name: packet-tool
         ports: 
         - containerPort: 9782
         env: 
