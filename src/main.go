@@ -35,7 +35,7 @@ func main() {
 
 	var (
 		packetsPipe     = make(chan udpBuffer, channelSize)
-		recycledBuffers = make(chan udpBuffer, channelSize)
+		recycledBuffers = make(chan udpBuffer, channelSize*2)
 		newAddresses    = make(chan string, 255)
 		deadAddresses   = make(chan string, 255)
 	)

@@ -138,9 +138,13 @@ func multicast(
 					delete(syncChannels, addr)
 				}
 			}
-			// Recycle the buffer
-			recycledBuffers <- packetData
 
+			select {
+			// Recycle packetData
+			case recycledBuffers <- packetData:
+			// Garbage collect packetData
+			default:
+			}
 		}
 
 	}
@@ -171,6 +175,9 @@ func writePackets(
 		case packetData, ok := <-downstreamChannel:
 			{
 				if !ok {
+					fmt.Printf("\x1b[34m closing downstream @ \x1b[0m%s\n",
+						address,
+					)
 					close(syncChannel)
 					return
 				}

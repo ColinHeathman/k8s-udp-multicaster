@@ -16,7 +16,7 @@ FROM scratch AS run
 COPY --from=build  /go/src/unbc.ca/udp-multicaster/app .
 
 ENV LISTEN_HOST=""
-ENV LISTEN_PORT="9782"
+ENV LISTEN_PORT=""
 ENV SERVICE_NAME=""
 ENV SERVICE_PORT="udp"
 ENV SYNC_INTERVAL="5s"
